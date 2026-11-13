@@ -49,13 +49,13 @@ sealed partial class Pet
         }
     }
 
-    static void DrawInosukeSword(Graphics g, int shoulderX, int shoulderY, double angle)
+    static void DrawInosukeSword(Graphics g, int shoulderX, int shoulderY, double angle, bool held = true)
     {
         double radians = angle * Math.PI / 180;
         int side = Math.Sign(shoulderX);
         int handX = shoulderX + (int)(18 * Math.Cos(radians));
         int handY = shoulderY + (int)(18 * Math.Sin(radians));
-        DrawInosukeArm(g, shoulderX, shoulderY, handX, handY);
+        if (held) DrawInosukeArm(g, shoulderX, shoulderY, handX, handY);
 
         var grip = g.Save();
         g.TranslateTransform(handX, handY);
@@ -68,7 +68,7 @@ sealed partial class Pet
         using (var edge = new Pen(Color.AliceBlue, 2)) g.DrawLine(edge, 6, 2, 27, 2);
         Box(g, Color.SaddleBrown, -6, -2, 10, 4);
         Box(g, Color.BurlyWood, 3, -4, 2, 8);
-        Oval(g, Skin, -4, -3, 7, 7);
+        if (held) Oval(g, Skin, -4, -3, 7, 7);
         g.Restore(grip);
     }
 

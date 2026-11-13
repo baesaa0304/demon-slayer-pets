@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 
 sealed partial class Pet
@@ -44,13 +44,6 @@ sealed partial class Pet
     }
 
     static void DrawFireDance(Graphics g, double phase) { DrawFireCut(g, phase, 1); }
-
-    static void DrawFireCombo(Graphics g, double phase)
-    {
-        double progress = phase * 3;
-        int cut = (int)progress;
-        DrawFireCut(g, progress - cut, cut == 1 ? -1 : 1);
-    }
 
     static Point SwordPoint(double angle, double distance)
     {

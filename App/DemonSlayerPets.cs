@@ -6,7 +6,7 @@ using System.Diagnostics;
 
 sealed partial class Pet : Form
 {
-    static readonly string[] Names = { "Tanjiro", "Nezuko", "Zenitsu", "Inosuke" };
+    static readonly string[] Names = { "Tanjiro", "Nezuko", "Zenitsu", "Inosuke", "Giyu" };
     static readonly Color Clear = Color.Magenta;
     readonly int kind;
     readonly Timer timer = new Timer { Interval = 33 };
@@ -30,7 +30,7 @@ sealed partial class Pet : Form
         BackColor = TransparencyKey = Clear;
         DoubleBuffered = true;
         ClientSize = new Size(144, 136);
-        x = area.Left + area.Width * (index + 1) / 5.0 - Width / 2;
+        x = area.Left + area.Width * (index + 1) / (Names.Length + 1.0) - Width / 2;
         direction = index % 2 == 0 ? 1 : -1;
         Location = new Point((int)x, area.Top - Height);
         ContextMenuStrip = new ContextMenuStrip();
@@ -89,11 +89,15 @@ sealed partial class Pet : Form
             return;
         }
 
+        if (attackTarget != null && now < actionUntil && UpdateEncounter(now, elapsed)) return;
+
         if (clickSkillQueued && now >= actionUntil)
         {
             PlayNextClickSkill();
             return;
         }
+
+        if (UpdateEncounter(now, elapsed)) return;
 
         if (automaticSkills && !mouseHeld && now >= actionUntil && now >= nextAutomaticSkill)
         {
@@ -114,6 +118,7 @@ sealed partial class Pet : Form
     void Play(Skill skill)
     {
         clickSkillQueued = false;
+        attackTarget = null;
         activeSkill = skill;
         actionUntil = clock.Elapsed.TotalSeconds + skill.Duration;
         ScheduleAutomaticSkill(actionUntil);
@@ -147,6 +152,7 @@ sealed partial class Pet : Form
 
         if (falling) DrawFalling(g, now);
         else if (landing) DrawLanding(g, 1 - (landingUntil - now) / LandingDuration);
+        else if (acting && attackTarget != null) DrawEncounterAttack(g, SkillPhase(now));
         else if (acting) activeSkill.Draw(g, SkillPhase(now));
         else DrawCharacter(g, kind, stride, kind == 2 && !walking);
     }
@@ -156,6 +162,8 @@ sealed partial class Pet : Form
     {
         if (args.Length == 1 && args[0] == "--check")
         {
+            if (!CanHitDemon(100, 150, 1, 0.5) || CanHitDemon(100, 158, 1, 0.5) ||
+                CanHitDemon(100, 150, -1, 0.5) || CanHitDemon(100, 150, 1, 0.3)) return 1;
             int facing = 1;
             if (Advance(9, 4, 0, 10, ref facing) != 10 || facing != -1) return 1;
             if (Advance(10, 12, 0, 10, ref facing) != 0 || facing != 1) return 1;

@@ -1,6 +1,8 @@
-# Demon Slayer Pets
+﻿# Demon Slayer Pets · 시즌 1
 
 귀멸의 칼날 캐릭터가 바탕화면을 돌아다니는 Windows 데스크톱 펫입니다. 앱을 켜면 탄지로가 화면 위에서 떨어져 등장합니다. 알림 영역에서 캐릭터를 불러오거나 돌려보내고, 기술을 골라 재생할 수 있습니다.
+
+Windows 실행 파일은 [시즌 1 릴리스](https://github.com/baesaa0304/demon-slayer-pets/releases/tag/v1.0.0)에서 받을 수 있습니다. 기술 범위는 TV 애니메이션 1기입니다.
 
 ## 폴더 구조
 
@@ -12,10 +14,11 @@ Demon Slayer/
 │   ├── PetInput.cs             # 클릭, 드래그, 다음 기술 예약
 │   └── PetFall.cs              # 등장·드롭 시 낙하와 착지 효과
 ├── Characters/
-│   ├── Tanjiro/Tanjiro.cs      # 양손 검술, 물의 호흡, 히노카미 카구라
-│   ├── Nezuko/Nezuko.cs        # 상자 숨기, 발차기, 분홍 불꽃
-│   ├── Zenitsu/Zenitsu.cs      # 벽력일섬과 연속 돌진
-│   └── Inosuke/Inosuke.cs      # 톱니 쌍검, 가면 벗기, 별 반짝임
+│   ├── Tanjiro/                # 양손 검술, 물의 호흡, 히노카미 카구라
+│   ├── Nezuko/                 # 폭혈, 크기 변화와 회복
+│   ├── Zenitsu/                # 벽력일섬과 청각 집중
+│   ├── Inosuke/                # 짐승의 호흡, 톱니 쌍검, 가면 벗기
+│   └── Giyu/                   # 물의 호흡 제4형과 제11형
 ├── Rendering/
 │   └── PetArt.cs               # 기본 SD 모습, 눈·도형·번개 그리기
 ├── assets/
@@ -28,7 +31,7 @@ C# 코드는 `partial class Pet`을 사용합니다. 파일이 여러 폴더에 
 
 ## 어디를 수정하면 되나요?
 
-- **기술을 추가할 때**는 해당 캐릭터 파일에 그리기 함수를 작성하고 [TrayMenu.cs](App/TrayMenu.cs)의 `Skills`에 이름, 함수, 재생 시간을 등록합니다. 목록 순서가 클릭으로 기술이 나오는 순서입니다.
+- **기술을 추가할 때**는 해당 캐릭터 폴더에 그리기 함수를 작성하고, 같은 폴더의 `Forms.cs` 또는 `Abilities.cs`로 끝나는 파일 안의 기술 목록에 이름, 함수, 재생 시간을 등록합니다. [TrayMenu.cs](App/TrayMenu.cs)는 네 목록을 트레이 메뉴에 연결합니다. 목록 순서가 클릭으로 기술이 나오는 순서입니다.
 - **캐릭터 생김새를 바꿀 때**는 [PetArt.cs](Rendering/PetArt.cs)의 `DrawCharacter()`부터 봅니다. 이노스케의 맨얼굴과 가면은 [Inosuke.cs](Characters/Inosuke/Inosuke.cs)에 있습니다.
 - **조작을 바꿀 때**는 [PetInput.cs](App/PetInput.cs), **낙하나 착지**는 [PetFall.cs](App/PetFall.cs)를 봅니다. 걷는 속도나 자동 기술 간격은 [DemonSlayerPets.cs](App/DemonSlayerPets.cs)에 있습니다.
 

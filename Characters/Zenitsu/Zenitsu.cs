@@ -1,4 +1,4 @@
-using System.Drawing;
+﻿using System.Drawing;
 
 sealed partial class Pet
 {
@@ -30,15 +30,4 @@ sealed partial class Pet
         g.Restore(pose);
     }
 
-    static double RushPhase(double phase) { return (phase * 3) % 1; }
-
-    static bool ZenitsuRushDashing(double phase) { return ZenitsuDashing(RushPhase(phase)); }
-
-    static void DrawZenitsuRush(Graphics g, double phase)
-    {
-        DrawZenitsuSkill(g, RushPhase(phase));
-        if (ZenitsuRushDashing(phase))
-            using (var flash = new Pen(Color.LightCyan, 2))
-                g.DrawLines(flash, new[] { P(-65, -15), P(-46, -30), P(-49, -17), P(-31, -28) });
-    }
 }

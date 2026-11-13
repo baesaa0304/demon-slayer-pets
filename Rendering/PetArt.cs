@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 
 sealed partial class Pet
@@ -6,7 +6,7 @@ sealed partial class Pet
     static readonly Color Ink = Color.FromArgb(39, 29, 39);
     static readonly Color Skin = Color.FromArgb(255, 206, 169);
     static readonly Color NezukoHair = Color.FromArgb(46, 29, 43);
-    static readonly Color[] Clothes = { Color.SeaGreen, Color.HotPink, Color.Orange, Color.Sienna };
+    static readonly Color[] Clothes = { Color.SeaGreen, Color.HotPink, Color.Orange, Color.Sienna, Color.Maroon };
 
     static void Box(Graphics g, Color color, int x, int y, int w, int h)
     {
@@ -98,6 +98,12 @@ sealed partial class Pet
             Shape(g, Color.FloralWhite, P(-14,-29), P(-18,-22), P(-10,-22));
             Shape(g, Color.FloralWhite, P(13,-29), P(9,-22), P(17,-22));
             Shape(g, Color.FloralWhite, P(13,-21), P(9,-15), P(17,-15));
+        }
+
+        if (kind == 4)
+        {
+            DrawGiyu(g);
+            return;
         }
 
         if (kind == 3)
