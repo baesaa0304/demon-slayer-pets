@@ -167,7 +167,7 @@ sealed partial class Pet : Form
         else if (acting && attackTarget != null) DrawEncounterAttack(g, SkillPhase(now));
         else if (acting) activeSkill.Draw(g, SkillPhase(now));
         else if (now < scratchUntil) DrawHurtPet(g, false, stride, kind == 2 && !walking);
-        else DrawCharacter(g, kind, stride, kind == 2 && !walking);
+        else DrawCharacter(g, kind, stride, kind == 2 && !walking, threeQuarter: !walking && !dragging);
     }
 
     [STAThread]

@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+using System.Drawing;
 
 sealed partial class Pet
 {
@@ -10,7 +10,7 @@ sealed partial class Pet
         };
     }
 
-    static void DrawGiyu(Graphics g)
+    static void DrawGiyu(Graphics g, bool threeQuarter)
     {
         Shape(g, Color.DarkOliveGreen, P(0,-35), P(15,-35), P(21,-18), P(15,-12), P(0,-12));
         Box(g, Color.DarkGoldenrod, 5, -29, 6, 6);
@@ -19,12 +19,19 @@ sealed partial class Pet
         Box(g, Color.Ivory, -4, -20, 9, 2);
         Shape(g, Ink, P(-20,-62), P(-23,-36), P(-31,-32), P(-21,-47), P(-25,-64), P(-14,-74),
             P(2,-79), P(15,-74), P(24,-65), P(23,-47), P(18,-39), P(-18,-40));
-        Oval(g, Skin, -19, -67, 38, 35);
+        SculptedFace(g, -19, -67, 38, 35);
         Shape(g, Color.FromArgb(35,42,60), P(-24,-65), P(-15,-73), P(1,-77), P(16,-72), P(23,-65),
             P(19,-48), P(13,-59), P(7,-56), P(4,-65), P(-4,-55), P(-7,-64), P(-19,-51));
-        DrawEye(g, -14, Color.SteelBlue, false);
-        DrawEye(g, 5, Color.SteelBlue, false);
-        Box(g, Color.Sienna, -2, -39, 6, 1);
+        Shape(g, Color.FromArgb(76, 96, 124), P(-19,-67), P(-10,-72), P(2,-74), P(-8,-69), P(-15,-64));
+        Shape(g, Color.FromArgb(63, 77, 103), P(5,-73), P(15,-70), P(20,-65), P(13,-68));
+        DrawEye(g, threeQuarter ? -9 : -14, Color.SteelBlue, false, loweredLid: true);
+        DrawEye(g, threeQuarter ? 8 : 5, Color.SteelBlue, false, threeQuarter ? 0.68f : 1, loweredLid: true);
+        Box(g, Color.Sienna, threeQuarter ? 4 : -2, -39, 6, 1);
+        if (threeQuarter)
+        {
+            Shape(g, Color.PeachPuff, P(6,-45), P(12,-42), P(6,-41));
+            Weapon(g, 15, -32, 32, Color.DarkOliveGreen, Color.LightSteelBlue);
+        }
     }
 
     static void DrawGiyuTide(Graphics g, double phase)

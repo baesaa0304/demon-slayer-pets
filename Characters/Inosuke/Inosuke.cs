@@ -150,6 +150,8 @@ sealed partial class Pet
         Shape(g, Color.RosyBrown, P(19,-62), P(12,-56), P(19,-55));
         Shape(g, Color.LightSlateGray, P(-15,-55), P(-3,-65), P(14,-58), P(20,-49),
             P(10,-40), P(-13,-42), P(-20,-49));
+        Shape(g, Color.Silver, P(-15,-56), P(-4,-63), P(9,-59), P(-2,-59), P(-8,-55));
+        Shape(g, Color.DarkSlateGray, P(-16,-43), P(-10,-40), P(-13,-37), P(-19,-41));
         Oval(g, Ink, -14, -52, 10, 10);
         Oval(g, Ink, 6, -52, 10, 10);
         Oval(g, Color.LightSkyBlue, -12, -50, 6, 6);

@@ -1,4 +1,5 @@
-﻿using System;
+using System.Windows.Forms;
+using System;
 using System.Drawing;
 
 sealed partial class Pet
@@ -69,17 +70,23 @@ sealed partial class Pet
         g.Restore(pose);
     }
 
-    static void DrawCharacter(Graphics g, int kind, int stride, bool sleeping, bool unmasked = false)
+    static void DrawCharacter(Graphics g, int kind, int stride, bool sleeping, bool unmasked = false, bool threeQuarter = false)
     {
         Color coat = Clothes[kind];
+        bool tanjiroPose = threeQuarter && kind == 0;
+        int frontFoot = tanjiroPose ? 8 : 0;
+        int backFoot = tanjiroPose ? -2 : 0;
 
-        Oval(g, Ink, -17 + stride, -11, 15, 11);
-        Oval(g, Ink, 3 - stride, -11, 15, 11);
-        Oval(g, Color.LightGray, -16 + stride, -7, 11, 3);
-        Oval(g, Color.LightGray, 6 - stride, -7, 10, 3);
+        Oval(g, Ink, -17 + stride + backFoot, -11, 15, 11);
+        Oval(g, Ink, 3 - stride + frontFoot, -11, 15, 11);
+        Oval(g, Color.LightGray, -16 + stride + backFoot, -7, 11, 3);
+        Oval(g, Color.LightGray, 6 - stride + frontFoot, -7, 10, 3);
 
         Shape(g, Ink, P(-16,-38), P(16,-38), P(24,-17), P(17,-9), P(-18,-9), P(-25,-17));
-        Shape(g, coat, P(-15,-35), P(15,-35), P(21,-18), P(15,-12), P(-15,-12), P(-22,-18));
+        using (var fabric = new System.Drawing.Drawing2D.LinearGradientBrush(
+            new Rectangle(-22, -36, 44, 25), ControlPaint.Light(coat, 0.32f),
+            ControlPaint.Dark(coat, 0.25f), 58f))
+            g.FillPolygon(fabric, new[] { P(-15,-35), P(15,-35), P(21,-18), P(15,-12), P(-15,-12), P(-22,-18) });
 
         if (kind == 0)
         {
@@ -102,7 +109,7 @@ sealed partial class Pet
 
         if (kind == 4)
         {
-            DrawGiyu(g);
+            DrawGiyu(g, threeQuarter);
             return;
         }
 
@@ -129,7 +136,7 @@ sealed partial class Pet
 
         Oval(g, Ink, -24, -74, 48, 46);
         Oval(g, Color.Peru, -21, -69, 43, 39);
-        Oval(g, Skin, -20, -70, 40, 38);
+        SculptedFace(g, -20, -70, 40, 38);
         if (kind == 0)
         {
             Shape(g, Ink, P(-24,-49), P(-29,-56), P(-23,-61), P(-24,-71), P(-15,-68),
@@ -139,6 +146,8 @@ sealed partial class Pet
             Shape(g, Color.IndianRed, P(-22,-61), P(-16,-69), P(-9,-69), P(-6,-75),
                 P(-3,-71), P(4,-76), P(8,-71), P(15,-73), P(20,-68), P(20,-63),
                 P(13,-68), P(4,-70), P(-4,-67), P(-13,-66));
+            Shape(g, Color.FromArgb(241, 150, 141), P(-14,-70), P(-6,-73), P(-9,-69));
+            Shape(g, Color.FromArgb(201, 102, 111), P(2,-74), P(15,-72), P(7,-71));
             Shape(g, Color.Firebrick, P(-12,-58), P(-7,-60), P(-3,-57), P(-5,-53), P(-11,-54));
             Box(g, Ink, -22, -45, 7, 15);
             Box(g, Color.Ivory, -21, -43, 5, 12);
@@ -149,6 +158,7 @@ sealed partial class Pet
             Shape(g, NezukoHair, P(-24,-48), P(-23,-64), P(-16,-73), P(-5,-76), P(11,-75),
                 P(21,-68), P(24,-56), P(20,-47), P(14,-58), P(9,-67), P(1,-61),
                 P(-4,-60), P(-1,-65), P(-11,-61), P(-18,-49));
+            Shape(g, Color.FromArgb(99, 66, 87), P(-19,-65), P(-10,-72), P(3,-73), P(-10,-68), P(-16,-62));
             Shape(g, Color.HotPink, P(11,-66), P(11,-73), P(17,-70), P(24,-73),
                 P(24,-64), P(18,-67), P(15,-60));
         }
@@ -164,9 +174,15 @@ sealed partial class Pet
                 P(24,-59), P(15,-63), P(8,-61), P(1,-66), P(-6,-62), P(-11,-66), P(-17,-61));
         }
 
+        if (kind == 2)
+        {
+            Shape(g, Color.LemonChiffon, P(-19,-68), P(-10,-73), P(2,-74), P(-7,-70));
+            Shape(g, Color.Khaki, P(5,-73), P(16,-71), P(20,-66), P(11,-69));
+        }
+
         Color iris = kind == 0 ? Color.Maroon : kind == 1 ? Color.MediumVioletRed : Color.SaddleBrown;
-        DrawEye(g, -14, iris, sleeping);
-        DrawEye(g, 5, iris, sleeping);
+        DrawEye(g, tanjiroPose ? -8 : -14, iris, sleeping);
+        DrawEye(g, tanjiroPose ? 9 : 5, iris, sleeping, tanjiroPose ? 0.70f : 1);
         if (kind == 1)
         {
             Oval(g, Ink, -12, -41, 26, 11);
@@ -176,11 +192,26 @@ sealed partial class Pet
         }
         else
         {
-            Oval(g, Color.IndianRed, -2, -39, 6, 3);
+            Oval(g, Color.IndianRed, tanjiroPose ? 5 : -2, -39, 6, 3);
+            if (tanjiroPose)
+            {
+                Shape(g, Color.PeachPuff, P(7,-45), P(12,-42), P(7,-41));
+                Shape(g, Color.DarkSeaGreen, P(-24,-27), P(-16,-34), P(-9,-27), P(-17,-18), P(-25,-20));
+                Shape(g, Ink, P(-22,-27), P(-17,-30), P(-13,-25), P(-18,-21));
+                Oval(g, Skin, -24, -22, 8, 7);
+            }
         }
     }
 
-    static void DrawEye(Graphics g, int x, Color iris, bool sleeping)
+    static void SculptedFace(Graphics g, int x, int y, int width, int height)
+    {
+        var bounds = new Rectangle(x, y, width, height);
+        using (var skin = new System.Drawing.Drawing2D.LinearGradientBrush(
+            bounds, Color.Linen, Color.FromArgb(215, 143, 119), 65f))
+            g.FillEllipse(skin, bounds);
+    }
+
+    static void DrawEye(Graphics g, int x, Color iris, bool sleeping, float width = 1, bool loweredLid = false)
     {
         if (sleeping)
         {
@@ -188,11 +219,22 @@ sealed partial class Pet
             return;
         }
 
-        Oval(g, Ink, x, -53, 11, 13);
-        Oval(g, Color.FloralWhite, x + 1, -51, 9, 10);
-        Oval(g, iris, x + 3, -51, 7, 10);
+        var eye = g.Save();
+        g.TranslateTransform(x, 0);
+        g.ScaleTransform(width, 1);
+        x = 0;
+        Oval(g, Ink, x, loweredLid ? -51 : -53, 11, loweredLid ? 11 : 13);
+        Oval(g, Color.FloralWhite, x + 1, loweredLid ? -50 : -51, 9, loweredLid ? 9 : 10);
+        Oval(g, iris, x + 3, loweredLid ? -50 : -51, 7, loweredLid ? 9 : 10);
         Oval(g, Ink, x + 5, -50, 4, 7);
-        Oval(g, Color.White, x + 4, -50, 3, 3);
+        if (!loweredLid) Oval(g, Color.White, x + 4, -50, 3, 3);
+        if (loweredLid)
+        {
+            using (var lid = new Pen(Ink, 1))
+                g.DrawLine(lid, 2, -50, 9, -50);
+            Oval(g, Color.White, 4, -49, 2, 2);
+        }
+        g.Restore(eye);
     }
 
 }
