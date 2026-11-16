@@ -32,6 +32,20 @@ sealed partial class Pet
         TanjiroSkills(), NezukoSkills(), ZenitsuSkills(), InosukeSkills(), GiyuSkills()
     };
 
+    static void AssignWaveFighters(Pet[] pets)
+    {
+        var fighters = Array.FindAll(pets, pet => pet != null && !pet.IsDisposed);
+        if (fighters.Length == 0) return;
+
+        int next = 0;
+        foreach (var demon in Demons)
+        {
+            if (!demon.IsWave || demon.Defeated) continue;
+            demon.Fighter = fighters[next];
+            next = (next + 1) % fighters.Length;
+        }
+    }
+
     static ContextMenuStrip CreateTrayMenu(Pet[] pets, Timer encounters)
     {
         var labels = new[] { "탄지로", "네즈코", "젠이츠", "이노스케", "기유" };
@@ -61,26 +75,35 @@ sealed partial class Pet
         var autoDemons = new ToolStripMenuItem("혈귀 자동 등장") { Checked = true, CheckOnClick = true };
         int preferredFighter = -1;
         var encounterClock = System.Diagnostics.Stopwatch.StartNew();
-        Action<DemonKind> spawnEncounter = variant =>
+        var demonNames = new[] { "남자 혈귀", "여자 혈귀", "어린 혈귀", "손 혈귀 · 강적", "늪 혈귀", "북 혈귀 · 강적", "거미 혈귀", "빡빡이 혈귀" };
+        Action<DemonKind?> spawnEncounter = variant =>
         {
-            if (encounter != null) return;
+            if (Demons.Count != 0) return;
             var pet = preferredFighter < 0 ? null : pets[preferredFighter];
             if (pet == null) pet = Array.Find(pets, current => current != null);
             if (pet == null) return;
             Rectangle area = Screen.PrimaryScreen.WorkingArea;
             int offset = pet.CenterX < area.Left + area.Width / 2 ? 210 : -210;
-            int center = Math.Max(area.Left + 42, Math.Min(area.Right - 42, pet.CenterX + offset));
-            encounter = new Demon(area, center, alwaysOnTop.Checked, variant, pet);
+            int count = variant.HasValue ? 1 : demonNames.Length;
+            int spacing = Math.Min(160, area.Width / count);
+            int left = area.Left + (area.Width - count * spacing) / 2;
             spawnDemon.Enabled = false;
-            encounter.FormClosed += (sender, args) =>
-            {
-                encounter = null;
-                spawnDemon.Enabled = play.Enabled;
-            };
             encounterClock.Restart();
-            encounter.Show();
+            for (int i = 0; i < count; i++)
+            {
+                int center = variant.HasValue ? pet.CenterX + offset : left + i * spacing + spacing / 2;
+                var demon = new Demon(area, center, alwaysOnTop.Checked, variant ?? (DemonKind)i, pet, !variant.HasValue);
+                Demons.Add(demon);
+                demon.FormClosed += (sender, args) =>
+                {
+                    Demons.Remove(demon);
+                    spawnDemon.Enabled = play.Enabled && Demons.Count == 0;
+                };
+                demon.Show();
+            }
+            if (!variant.HasValue) AssignWaveFighters(pets);
         };
-        var demonNames = new[] { "남자 혈귀", "여자 혈귀", "어린 혈귀", "손 혈귀 · 강적" };
+        spawnDemon.DropDownItems.Add("혈귀 전체 소환", null, (sender, args) => spawnEncounter(null));
         for (int i = 0; i < demonNames.Length; i++)
         {
             var variant = (DemonKind)i;
@@ -88,16 +111,14 @@ sealed partial class Pet
         }
         encounters.Tick += (sender, args) =>
         {
-            if (encounter != null) encounter.UpdateScene();
-            else if (autoDemons.Checked && spawnDemon.Enabled && encounterClock.Elapsed.TotalSeconds >= 45)
-            {
+            for (int i = Demons.Count - 1; i >= 0; i--) Demons[i].UpdateScene();
+            if (autoDemons.Checked && spawnDemon.Enabled && encounterClock.Elapsed.TotalSeconds >= 45)
                 spawnEncounter((DemonKind)SkillRandom.Next(demonNames.Length));
-            }
         };
         autoDemons.CheckedChanged += (sender, args) => encounterClock.Restart();
         alwaysOnTop.CheckedChanged += (sender, args) =>
         {
-            if (encounter != null) encounter.TopMost = alwaysOnTop.Checked;
+            foreach (var demon in Demons) demon.TopMost = alwaysOnTop.Checked;
         };
 
         for (int i = 0; i < pets.Length; i++)
@@ -126,9 +147,9 @@ sealed partial class Pet
 
             Skill selectedAttack = null;
             var battleItem = new ToolStripMenuItem(labels[index]);
-            foreach (var draw in EncounterAttacks[index])
+            foreach (var skill in Skills[index])
             {
-                var skill = Array.Find(Skills[index], candidate => candidate.Draw == draw);
+                if (!IsEncounterSkill(index, skill)) continue;
                 if (selectedAttack == null) selectedAttack = skill;
                 string title = skill.Group == null ? skill.Name : skill.Group + " · " + skill.Name;
                 var option = new ToolStripMenuItem(title) { Checked = skill == selectedAttack };
@@ -136,8 +157,9 @@ sealed partial class Pet
                 {
                     preferredFighter = index;
                     selectedAttack = skill;
-                    if (encounter != null && pets[index] != null && !encounter.Defeated)
-                        encounter.Fighter = pets[index];
+                    if (pets[index] != null)
+                        foreach (var demon in Demons)
+                            if (!demon.IsWave) demon.Fighter = pets[index];
                     foreach (ToolStripMenuItem choice in battleItem.DropDownItems)
                         choice.Checked = choice == option;
                     if (pets[index] != null) pets[index].encounterSkill = skill;
@@ -159,19 +181,21 @@ sealed partial class Pet
                     spawnItem.Enabled = true;
                     playItem.Enabled = dismissItem.Enabled = false;
                     play.Enabled = dismiss.Enabled = Array.Exists(pets, current => current != null);
-                    if (encounter != null && encounter.Fighter == pet)
+                    foreach (var demon in Demons.ToArray())
                     {
                         var replacement = Array.Find(pets, current => current != null);
-                        if (replacement == null) encounter.Close();
-                        else encounter.Fighter = replacement;
+                        if (replacement == null) demon.Close();
+                        else if (demon.Fighter == pet) demon.Fighter = replacement;
                     }
-                    spawnDemon.Enabled = play.Enabled && encounter == null;
+                    AssignWaveFighters(pets);
+                    spawnDemon.Enabled = play.Enabled && Demons.Count == 0;
                 };
                 pet.Show();
+                AssignWaveFighters(pets);
                 if (!pet.TopMost) pet.SendToBack();
                 spawnItem.Enabled = false;
                 playItem.Enabled = dismissItem.Enabled = play.Enabled = dismiss.Enabled = true;
-                spawnDemon.Enabled = encounter == null;
+                spawnDemon.Enabled = Demons.Count == 0;
             };
             dismissItem.Click += (sender, args) => { if (pets[index] != null) pets[index].Close(); };
             spawn.DropDownItems.Add(spawnItem);

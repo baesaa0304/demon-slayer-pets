@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
@@ -6,15 +6,20 @@ using System.Windows.Forms;
 sealed partial class Pet
 {
     const int DemonReach = 57;
-    static Demon encounter;
+    static readonly System.Collections.Generic.List<Demon> Demons = new System.Collections.Generic.List<Demon>();
     static readonly Action<Graphics, double>[][] EncounterAttacks =
     {
-        new Action<Graphics, double>[] { DrawFireDance, DrawTanjiroSkill, DrawWaterWheel },
         new Action<Graphics, double>[] { DrawNezukoBurst, DrawNezukoKick },
-        new Action<Graphics, double>[] { DrawZenitsuSkill },
-        new Action<Graphics, double>[] { DrawInosukeSkill
-        }, new Action<Graphics, double>[] { DrawGiyuCalm, DrawGiyuTide }
+        new Action<Graphics, double>[] { DrawZenitsuSkill, DrawZenitsuSixfold },
+        new Action<Graphics, double>[] { DrawInosukeBite, DrawInosukeSkill },
+        new Action<Graphics, double>[] { DrawGiyuTide }
     };
+    static bool IsEncounterSkill(int character, Skill skill)
+    {
+        if (character == 0) return skill.Group == WaterGroup || skill.Group == SunGroup;
+        return Array.IndexOf(EncounterAttacks[character - 1], skill.Draw) >= 0;
+    }
+
     static readonly Color[] EncounterColors = { Color.OrangeRed, Color.DeepPink, Color.Gold, Color.LightSkyBlue, Color.DeepSkyBlue };
     Skill encounterSkill;
 
@@ -25,8 +30,10 @@ sealed partial class Pet
 
     Demon attackTarget;
     bool attackLanded;
+    const double HurtDuration = 0.52;
+    double hurtUntil, scratchUntil, knockbackStart;
 
-    enum DemonKind { Man, Woman, Child, Hand }
+    enum DemonKind { Man, Woman, Child, Hand, Swamp, Drum, Spider, Bald }
 
     bool UpdateEncounter(double now, double elapsed)
     {
@@ -36,7 +43,22 @@ sealed partial class Pet
             if (now >= actionUntil)
             {
                 attackTarget = null;
-                return now < actionUntil;
+                if (attackLanded && !target.IsDisposed && target.CanCounter && target.Fighter == this)
+                {
+                    var defense = Array.Find(Skills[kind], skill => skill.Draw == DrawGiyuCalm);
+                    if (defense != null)
+                    {
+                        Play(defense);
+                        return true;
+                    }
+
+                    hurtUntil = now + HurtDuration;
+                    scratchUntil = now + 4;
+                    knockbackStart = x;
+                    Invalidate();
+                    return true;
+                }
+                return false;
             }
 
             double phase = SkillPhase(now);
@@ -50,7 +72,7 @@ sealed partial class Pet
                     Left = (int)Math.Round(x);
                 }
 
-                double impact = 0.48;
+                double impact = activeSkill.Draw == DrawZenitsuSixfold ? 0.90 : 0.48;
                 if (!attackLanded && CanHitDemon(CenterX, target.CenterX, direction, phase, impact))
                 {
                     attackLanded = true;
@@ -61,7 +83,18 @@ sealed partial class Pet
             return true;
         }
 
-        if (encounter == null || encounter.IsDisposed || encounter.Defeated || encounter.Fighter != this ||
+        Demon encounter = null;
+        int nearest = int.MaxValue;
+        foreach (var demon in Demons)
+        {
+            if (demon.IsDisposed || demon.Defeated || demon.Fighter != this) continue;
+            int distance = Math.Abs(demon.CenterX - CenterX);
+            if (distance >= nearest) continue;
+            nearest = distance;
+            encounter = demon;
+        }
+
+        if (encounter == null ||
             mouseHeld || now < actionUntil)
             return false;
 
@@ -100,6 +133,36 @@ sealed partial class Pet
         g.Restore(label);
     }
 
+    void DrawHurtPet(Graphics g, bool flinching, int stride, bool sleeping)
+    {
+        double phase = 1 - (hurtUntil - clock.Elapsed.TotalSeconds) / HurtDuration;
+        if (flinching)
+        {
+            g.TranslateTransform(0, (float)(-20 * Math.Sin(Math.PI * Math.Max(0, phase))));
+            g.RotateTransform((float)(-25 * (1 - phase)));
+        }
+        DrawCharacter(g, kind, stride, flinching || sleeping);
+
+        int cheekY = kind == 3 ? -43 : -41;
+        using (var scratch = new Pen(Color.IndianRed, 1))
+        {
+            g.DrawLine(scratch, -13, cheekY, -9, cheekY + 3);
+            g.DrawLine(scratch, -14, cheekY + 3, -11, cheekY + 5);
+        }
+        if (flinching && phase < 0.65)
+        {
+            int travel = (int)(20 * Math.Max(0, phase));
+            Box(g, Color.Firebrick, 17 + travel, -48 - travel, 3, 2);
+            Box(g, Color.Crimson, 23 + travel, -43 - travel / 2, 2, 2);
+            Box(g, Color.IndianRed, 15 + travel, -39 + travel / 2, 2, 2);
+        }
+    }
+
+    static double KnockbackX(double start, int facing, double phase)
+    {
+        return start - facing * 72 * (1 - Math.Pow(1 - phase, 3));
+    }
+
     int CenterX { get { return Left + Width / 2; } }
 
     static bool CanHitDemon(int attacker, int demon, int facing, double phase, double impact = 0.48)
@@ -113,10 +176,11 @@ sealed partial class Pet
         readonly Stopwatch life = Stopwatch.StartNew();
         double defeatedAt = -1, hitAt = -1;
         readonly DemonKind variant;
+        public bool IsWave { get; private set; }
         int health, hitDirection;
         Color hitColor;
 
-        public Demon(Rectangle area, int center, bool alwaysOnTop, DemonKind variant, Pet fighter)
+        public Demon(Rectangle area, int center, bool alwaysOnTop, DemonKind variant, Pet fighter, bool wave)
         {
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.Manual;
@@ -125,14 +189,16 @@ sealed partial class Pet
             BackColor = TransparencyKey = Clear;
             DoubleBuffered = true;
             this.variant = variant;
+            IsWave = wave;
             Fighter = fighter;
-            health = variant == DemonKind.Hand ? 3 : 1;
-            ClientSize = variant == DemonKind.Hand ? new Size(148, 128) : new Size(84, 92);
+            health = variant == DemonKind.Hand ? HandDemonHealth : variant == DemonKind.Drum ? 3 : variant == DemonKind.Spider ? 2 : 1;
+            ClientSize = variant == DemonKind.Hand ? new Size(176, 148) : new Size(84, 92);
             Location = new Point(Math.Max(area.Left, Math.Min(area.Right - Width, center - Width / 2)), area.Bottom - Height);
         }
 
         public Pet Fighter { get; set; }
         public int CenterX { get { return Left + Width / 2; } }
+        public bool CanCounter { get { return (variant == DemonKind.Hand || variant == DemonKind.Drum || variant == DemonKind.Spider) && !Defeated; } }
         public bool Defeated { get { return defeatedAt >= 0; } }
         protected override bool ShowWithoutActivation { get { return true; } }
 
@@ -158,7 +224,7 @@ sealed partial class Pet
         public void UpdateScene()
         {
             double now = life.Elapsed.TotalSeconds;
-            if (Defeated ? now - defeatedAt >= 0.62 : now >= 18)
+            if (Defeated ? now - defeatedAt >= 0.62 : now >= (IsWave ? 90 : variant == DemonKind.Hand ? 30 : 18))
                 Close();
             else
                 Invalidate();
@@ -207,7 +273,13 @@ sealed partial class Pet
             g.TranslateTransform(0, (float)(-2 - 2 * Math.Sin(now * 6)));
             if (variant == DemonKind.Hand)
             {
-                DrawHandDemon(g, now, now - hitAt < 0.16, health);
+                DrawHandDemon(g, now, now - hitAt < 0.16);
+                return;
+            }
+
+            if (variant == DemonKind.Spider)
+            {
+                DrawSpiderDemon(g, now);
                 return;
             }
 
@@ -215,6 +287,19 @@ sealed partial class Pet
             Color robe = variant == DemonKind.Woman ? Color.DarkMagenta :
                 variant == DemonKind.Child ? Color.DarkSlateBlue : Color.DarkCyan;
             Color pale = Color.FromArgb(236, 216, 211);
+            if (variant == DemonKind.Bald) robe = Color.SaddleBrown;
+            switch (variant)
+            {
+                case DemonKind.Swamp:
+                    robe = Color.MidnightBlue;
+                    pale = Color.LightSteelBlue;
+                    Oval(g, Ink, -38, -13, 76, 14);
+                    Oval(g, Color.DarkSlateBlue, -31, -11, 62, 9);
+                    break;
+                case DemonKind.Drum:
+                    robe = Color.DarkRed;
+                    break;
+            }
             Color hair = Color.FromArgb(35, 29, 43);
             Color marks = Color.FromArgb(147, 46, 71);
 
@@ -229,44 +314,50 @@ sealed partial class Pet
             Shape(g, pale, P(-18,-24), P(-29,-20), P(-31,-15), P(-26,-16), P(-23,-13), P(-16,-19));
             Shape(g, pale, P(18,-25), P(28,-21), P(32,-16), P(27,-17), P(24,-14), P(16,-19));
 
-            Shape(g, Ink, P(-25,-39), P(-28,-58), P(-23,-70), P(-14,-75), P(-9,-79),
-                P(-1,-76), P(7,-81), P(11,-76), P(21,-77), P(21,-71), P(28,-63),
-                P(25,-49), P(27,-38), P(15,-31), P(-16,-32));
-            if (variant == DemonKind.Woman)
-                Shape(g, hair, P(-24,-62), P(22,-66), P(28,-46), P(27,-19), P(17,-24),
-                    P(13,-38), P(-12,-39), P(-16,-21), P(-28,-17), P(-23,-35));
-
-            Oval(g, Color.FromArgb(173, 140, 149), -21, -68, 43, 39);
-            Oval(g, pale, -19, -67, 39, 35);
-            Shape(g, hair, P(-25,-53), P(-24,-67), P(-14,-74), P(-8,-77), P(-1,-73),
-                P(8,-79), P(13,-73), P(20,-75), P(21,-69), P(26,-62), P(21,-46),
-                P(17,-56), P(14,-62), P(8,-56), P(7,-65), P(-3,-58), P(-4,-65),
-                P(-13,-55), P(-14,-62));
-            Shape(g, Color.FromArgb(78, 49, 65), P(-21,-67), P(-11,-74), P(-4,-72),
-                P(-12,-69), P(-17,-62));
-            Shape(g, Color.FromArgb(78, 49, 65), P(3,-72), P(8,-76), P(12,-71), P(19,-70), P(14,-67));
-            if (variant == DemonKind.Woman)
+            if (variant == DemonKind.Bald || variant == DemonKind.Child)
             {
-                Oval(g, Color.Plum, 14, -68, 9, 8);
-                Box(g, Color.Gold, 17, -65, 3, 3);
+                DrawShavedDemonHead(g, pale, variant == DemonKind.Child);
             }
-            if (variant == DemonKind.Child)
-                Shape(g, Color.SlateGray, P(-15,-70), P(-3,-75), P(12,-74), P(20,-67), P(5,-69));
+            else
+            {
+                Shape(g, Ink, P(-25,-39), P(-28,-58), P(-23,-70), P(-14,-75), P(-9,-79),
+                    P(-1,-76), P(7,-81), P(11,-76), P(21,-77), P(21,-71), P(28,-63),
+                    P(25,-49), P(27,-38), P(15,-31), P(-16,-32));
+                if (variant == DemonKind.Woman)
+                    Shape(g, hair, P(-24,-62), P(22,-66), P(28,-46), P(27,-19), P(17,-24),
+                        P(13,-38), P(-12,-39), P(-16,-21), P(-28,-17), P(-23,-35));
+
+                Oval(g, Color.FromArgb(173, 140, 149), -21, -68, 43, 39);
+                Oval(g, pale, -19, -67, 39, 35);
+                Shape(g, hair, P(-25,-53), P(-24,-67), P(-14,-74), P(-8,-77), P(-1,-73),
+                    P(8,-79), P(13,-73), P(20,-75), P(21,-69), P(26,-62), P(21,-46),
+                    P(17,-56), P(14,-62), P(8,-56), P(7,-65), P(-3,-58), P(-4,-65),
+                    P(-13,-55), P(-14,-62));
+                Shape(g, Color.FromArgb(78, 49, 65), P(-21,-67), P(-11,-74), P(-4,-72),
+                    P(-12,-69), P(-17,-62));
+                Shape(g, Color.FromArgb(78, 49, 65), P(3,-72), P(8,-76), P(12,-71), P(19,-70), P(14,-67));
+                if (variant == DemonKind.Woman)
+                {
+                    Oval(g, Color.Plum, 14, -68, 9, 8);
+                    Box(g, Color.Gold, 17, -65, 3, 3);
+                }
+            }
 
             using (var lines = new Pen(marks, 2))
             {
                 g.DrawLines(lines, new[] { P(-16,-55), P(-19,-50), P(-16,-44), P(-18,-39) });
                 g.DrawLines(lines, new[] { P(14,-56), P(17,-52), P(15,-46), P(19,-40) });
             }
-            Shape(g, Ink, P(-15,-52), P(-4,-50), P(-1,-46), P(-9,-44), P(-15,-47));
-            Shape(g, Ink, P(3,-46), P(6,-51), P(17,-54), P(16,-48), P(11,-44));
-            Shape(g, Color.Gold, P(-13,-50), P(-5,-48), P(-4,-46), P(-10,-46));
-            Shape(g, Color.Gold, P(6,-48), P(15,-52), P(14,-48), P(10,-46));
-            Box(g, Color.Crimson, -9, -49, 2, 4);
-            Box(g, Color.Crimson, 10, -50, 2, 4);
-            Shape(g, Ink, P(-8,-39), P(-3,-40), P(10,-43), P(8,-37), P(1,-34), P(-6,-36));
-            Shape(g, Color.Ivory, P(-6,-39), P(-2,-40), P(-3,-36));
-            Shape(g, Color.Ivory, P(5,-41), P(9,-42), P(6,-37));
+            DrawDemonFace(g, variant == DemonKind.Child, variant == DemonKind.Woman);
+            if (variant == DemonKind.Drum)
+            {
+                for (int x = -18; x <= 6; x += 12)
+                {
+                    Oval(g, Ink, x, -29, 13, 13);
+                    Oval(g, Color.BurlyWood, x + 2, -27, 9, 9);
+                    Box(g, Color.Maroon, x + 5, -24, 3, 3);
+                }
+            }
         }
     }
 }

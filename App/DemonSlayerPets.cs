@@ -89,7 +89,17 @@ sealed partial class Pet : Form
             return;
         }
 
-        if (attackTarget != null && now < actionUntil && UpdateEncounter(now, elapsed)) return;
+        if (hurtUntil > 0)
+        {
+            double hurtPhase = Progress(now, hurtUntil - HurtDuration, hurtUntil);
+            x = Math.Max(area.Left - 44, Math.Min(area.Right - Width + 44, KnockbackX(knockbackStart, direction, hurtPhase)));
+            Left = (int)Math.Round(x);
+            if (hurtPhase >= 1) hurtUntil = 0;
+            Invalidate();
+            return;
+        }
+
+        if (attackTarget != null && UpdateEncounter(now, elapsed)) return;
 
         if (clickSkillQueued && now >= actionUntil)
         {
@@ -144,16 +154,19 @@ sealed partial class Pet : Form
         double now = clock.Elapsed.TotalSeconds;
         bool falling = !dragging && Top < Screen.PrimaryScreen.WorkingArea.Bottom - Height;
         bool landing = !dragging && now < landingUntil;
-        bool acting = !dragging && !falling && !landing && now < actionUntil;
-        bool walking = !dragging && !falling && !landing && !acting && Walking(now);
+        bool hurt = !dragging && now < hurtUntil;
+        bool acting = !hurt && !dragging && !falling && !landing && now < actionUntil;
+        bool walking = !hurt && !dragging && !falling && !landing && !acting && Walking(now);
         int stride = walking ? (int)(Math.Sin(now * 14) * 3) : 0;
         g.TranslateTransform(ClientSize.Width / 2, ClientSize.Height - 2 - Math.Abs(stride));
         g.ScaleTransform(direction, 1);
 
         if (falling) DrawFalling(g, now);
         else if (landing) DrawLanding(g, 1 - (landingUntil - now) / LandingDuration);
+        else if (hurt) DrawHurtPet(g, true, 0, false);
         else if (acting && attackTarget != null) DrawEncounterAttack(g, SkillPhase(now));
         else if (acting) activeSkill.Draw(g, SkillPhase(now));
+        else if (now < scratchUntil) DrawHurtPet(g, false, stride, kind == 2 && !walking);
         else DrawCharacter(g, kind, stride, kind == 2 && !walking);
     }
 
@@ -164,6 +177,8 @@ sealed partial class Pet : Form
         {
             if (!CanHitDemon(100, 150, 1, 0.5) || CanHitDemon(100, 158, 1, 0.5) ||
                 CanHitDemon(100, 150, -1, 0.5) || CanHitDemon(100, 150, 1, 0.3)) return 1;
+            if (KnockbackX(100, 1, 1) != 28 || KnockbackX(100, -1, 1) != 172 ||
+                KnockbackX(100, 1, 0.5) >= 82) return 1;
             int facing = 1;
             if (Advance(9, 4, 0, 10, ref facing) != 10 || facing != -1) return 1;
             if (Advance(10, 12, 0, 10, ref facing) != 0 || facing != 1) return 1;

@@ -5,7 +5,7 @@ sealed partial class Pet
 {
     const string WaterGroup = "물의 호흡";
     const string SunGroup = "히노카미 카구라";
-    const string TanjiroOtherGroup = "기타 동작";
+    const string TanjiroOtherGroup = "감각·수련";
 
     static Skill[] TanjiroSkills()
     {
@@ -24,7 +24,7 @@ sealed partial class Pet
             Water("응용 · 물방울 파문 찌르기·곡", -41, 33, 0, 1),
             new Skill("원무 (円舞)", DrawFireDance, 1.30, group: SunGroup),
             new Skill("후각 · 빈틈의 실", DrawOpeningThread, 1.25, group: TanjiroOtherGroup),
-            new Skill("전집중 호흡", DrawTotalConcentration, 1.55, group: TanjiroOtherGroup)
+            new Skill("전집중 호흡 수련", DrawTotalConcentration, 1.55, group: TanjiroOtherGroup)
         };
     }
 

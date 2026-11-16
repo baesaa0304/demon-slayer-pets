@@ -34,6 +34,7 @@ sealed partial class Pet
 
         dragging = true;
         actionUntil = 0;
+        hurtUntil = 0;
         clickSkillQueued = false;
         fallSpeed = landingUntil = 0;
         Rectangle area = Screen.PrimaryScreen.WorkingArea;

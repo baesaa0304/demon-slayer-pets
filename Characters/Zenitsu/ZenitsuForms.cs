@@ -8,8 +8,16 @@ sealed partial class Pet
         const string thunder = "번개의 호흡";
         return new[] {
             new Skill("제1형 · 벽력일섬", DrawZenitsuSkill, 0.95, ZenitsuDashing, group: thunder),
+            new Skill("제1형 · 벽력일섬 6연", DrawZenitsuSixfold, 2.1, ZenitsuSixfoldDashing, 640, thunder),
             new Skill("청각 집중", DrawZenitsuListening, 1.55)
         };
+    }
+
+    static bool ZenitsuSixfoldDashing(double phase) { return ZenitsuDashing(phase * 6 % 1); }
+
+    static void DrawZenitsuSixfold(Graphics g, double phase)
+    {
+        DrawZenitsuSkill(g, phase * 6 % 1);
     }
 
     static void DrawZenitsuListening(Graphics g, double phase)

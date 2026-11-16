@@ -7,7 +7,7 @@ sealed partial class Pet
     {
         const string beast = "짐승의 호흡";
         return new[] {
-            Beast("제3엄니 · 물어뜯기 (喰い裂き)", -18, -162, 134, 0, 1),
+            new Skill("제3엄니 · 물어뜯기 (喰い裂き)", DrawInosukeBite, 1.08, group: beast),
             new Skill("제7형 · 공간식각", DrawSpatialAwareness, 1.55, group: beast),
             new Skill("도약 쌍검", DrawInosukeSkill),
             new Skill("멧돼지 가면 벗기", DrawInosukeUnmask, 2.0),
@@ -15,33 +15,25 @@ sealed partial class Pet
         };
     }
 
-    static Skill Beast(string name, int left, int right, int sweep, int jump, int hits, bool dash = false, int reach = 0)
-    {
-        return new Skill(name, (g, phase) => DrawBeastForm(g, phase, left, right, sweep, jump, hits, reach),
-            0.95 + hits * 0.13, dash ? (Func<double, bool>)BreathingDash : null, 495, "짐승의 호흡");
-    }
-
-    static void DrawBeastForm(Graphics g, double phase, int left, int right, int sweep, int jump, int hits, int reach)
+    static void DrawInosukeBite(Graphics g, double phase)
     {
         double charge = Pulse(phase, 0, 0.22, 0.36);
         double attack = Pulse(phase, 0.22, 0.53, 0.94);
-        double combo = Progress(phase, 0.22, 0.82) * hits;
-        double slash = Math.Min(1, combo - Math.Min(hits - 1, (int)combo));
+        double slash = Progress(phase, 0.22, 0.82);
         var state = g.Save();
-        g.TranslateTransform((float)(6 * attack - 5 * charge), (float)(-(jump + 6) * attack));
+        g.TranslateTransform((float)(6 * attack - 5 * charge), (float)(-6 * attack));
         g.RotateTransform((float)(15 * attack - 7 * charge));
         g.ScaleTransform(0.88f, (float)(1 - 0.21 * charge));
         DrawCharacter(g, 3, (int)(5 * attack), false);
-        int extension = (int)(reach * attack);
-        double first = left - sweep * slash;
-        double second = right + sweep * slash;
-        DrawInosukeSword(g, -14 - extension, -28, first);
-        DrawInosukeSword(g, 14 + extension, -28, second);
+        double first = -18 - 134 * slash;
+        double second = -162 + 134 * slash;
+        DrawInosukeSword(g, -14, -28, first);
+        DrawInosukeSword(g, 14, -28, second);
         if (phase > 0.31 && phase < 0.78)
         {
             using (var wind = new Pen(Color.LightSteelBlue, 3))
             {
-                int tail = Math.Min(220, Math.Max(18, sweep));
+                int tail = 134;
                 g.DrawArc(wind, -62, -78, 91, 80, (int)first, tail);
                 g.DrawArc(wind, -29, -78, 91, 80, (int)second - tail, tail);
             }

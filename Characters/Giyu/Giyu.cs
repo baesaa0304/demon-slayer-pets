@@ -1,4 +1,4 @@
-using System.Drawing;
+﻿using System.Drawing;
 
 sealed partial class Pet
 {
@@ -54,7 +54,11 @@ sealed partial class Pet
             using (var water = new Pen(i == 0 ? Color.DeepSkyBlue : Color.LightCyan, 2))
                 g.DrawEllipse(water, -radius, -16 - i * 6, radius * 2, 11);
         }
-        if (phase > 0.45 && phase < 0.60)
-            using (var flash = new Pen(Color.Ivory, 2)) g.DrawLine(flash, 18, -40, 66, -47);
+        if (phase >= 0.25 && phase <= 0.55)
+        {
+            int radius = 34 + (int)(19 * Progress(phase, 0.25, 0.55));
+            using (var guard = new Pen(Color.LightCyan, 2))
+                g.DrawArc(guard, -radius, -76, radius * 2, 67, -68, 138);
+        }
     }
 }
